@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Psychology Flashcards</title>
+    <meta name="theme-color" content="#0f766e" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="app-header">
+        <h1 class="app-title">Psychology Flashcards</h1>
+        <nav class="tab-nav">
+          <button
+            class="tab-button active"
+            data-target="upload-section"
+            type="button"
+          >
+            Upload
+          </button>
+          <button
+            class="tab-button"
+            data-target="study-section"
+            type="button"
+          >
+            Study
+          </button>
+        </nav>
+      </header>
+
+      <main class="app-main">
+        <!-- Upload screen -->
+        <section id="upload-section" class="screen active">
+          <div class="card">
+            <h2 class="card-title">Upload cards</h2>
+
+            <div class="field-group" id="book-existing-group">
+              <label for="book-select" class="field-label">Existing book</label>
+              <select id="book-select" class="field-input"></select>
+            </div>
+
+            <div class="field-group">
+              <label for="book-name-input" class="field-label"
+                >New book name (optional)</label
+              >
+              <input
+                id="book-name-input"
+                class="field-input"
+                type="text"
+                maxlength="80"
+                placeholder="e.g. General Psychology"
+              />
+            </div>
+
+            <div class="field-group">
+              <label for="json-input" class="field-label"
+                >JSON flashcard data</label
+              >
+              <textarea
+                id="json-input"
+                class="field-input textarea"
+                rows="10"
+                placeholder='Paste an array of flashcard objects, e.g.:
+[
+  {
+    "id": "1",
+    "type": "multiple_choice",
+    "question": "...",
+    "options": ["A. ...", "B. ...", "C. ...", "D. ...", "E. ..."],
+    "correct": "A. ...",
+    "topic": "...",
+    "book": "book_1",
+    "language": "cs",
+    "weight": 1.0,
+    "timesCorrect": 0,
+    "timesWrong": 0,
+    "lastSeen": null
+  }
+]'
+              ></textarea>
+            </div>
+
+            <div class="button-row">
+              <button id="add-cards-btn" class="btn primary" type="button">
+                Add cards
+              </button>
+              <button id="clear-cards-btn" class="btn danger" type="button">
+                Clear all cards
+              </button>
+            </div>
+
+            <p id="upload-message" class="message hidden"></p>
+
+            <p class="stat-line">
+              Total cards stored:
+              <span id="card-count" class="stat-value">0</span>
+            </p>
+          </div>
+        </section>
+
+        <!-- Study screen -->
+        <section id="study-section" class="screen">
+          <div class="card">
+            <h2 class="card-title">Study</h2>
+
+            <div class="filters">
+              <div class="field-group">
+                <label for="book-filter" class="field-label">Book</label>
+                <select id="book-filter" class="field-input">
+                  <option value="all">All books</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="language-filter" class="field-label"
+                  >Language</label
+                >
+                <select id="language-filter" class="field-input">
+                  <option value="all">All</option>
+                  <option value="cs">Czech (cs)</option>
+                  <option value="en">English (en)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="study-toggle-row">
+              <button
+                id="practice-view-btn"
+                class="btn pill small active"
+                type="button"
+              >
+                Practice
+              </button>
+              <button
+                id="wrong-log-view-btn"
+                class="btn pill small"
+                type="button"
+              >
+                Wrong answers log
+              </button>
+            </div>
+
+            <!-- Practice view -->
+            <div id="practice-view" class="study-view active">
+              <p id="no-cards-message" class="message info">
+                Add some cards on the Upload tab to start studying.
+              </p>
+
+              <div id="flashcard-container" class="flashcard hidden">
+                <div class="meta-row">
+                  <span id="card-topic" class="chip"></span>
+                  <span id="card-language" class="chip subtle"></span>
+                  <span id="card-book" class="chip subtle"></span>
+                </div>
+
+                <div id="question-text" class="question-text"></div>
+
+                <div id="answer-area" class="answer-area"></div>
+
+                <p id="feedback" class="feedback-message"></p>
+
+                <div class="button-row tight">
+                  <button
+                    id="discard-card-btn"
+                    class="btn ghost danger"
+                    type="button"
+                  >
+                    Discard card
+                  </button>
+                </div>
+
+                <div
+                  id="confidence-container"
+                  class="confidence-container hidden"
+                >
+                  <p class="confidence-title">
+                    How well did you know it?
+                  </p>
+                  <div class="button-row wrap">
+                    <button
+                      class="btn confidence-btn danger"
+                      data-rating="didnt_know"
+                      type="button"
+                    >
+                      Didn't know
+                    </button>
+                    <button
+                      class="btn confidence-btn warning"
+                      data-rating="shaky"
+                      type="button"
+                    >
+                      Shaky
+                    </button>
+                    <button
+                      class="btn confidence-btn good"
+                      data-rating="good"
+                      type="button"
+                    >
+                      Good
+                    </button>
+                    <button
+                      class="btn confidence-btn success"
+                      data-rating="nailed_it"
+                      type="button"
+                    >
+                      Nailed it
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Wrong answers log view -->
+            <div id="wrong-log-view" class="study-view">
+              <div id="wrong-log-empty" class="message info">
+                You have no wrong answers yet.
+              </div>
+              <ul id="wrong-log-list" class="wrong-log-list"></ul>
+              <div id="wrong-log-detail" class="wrong-log-detail hidden">
+                <h3 class="wrong-log-question" id="wrong-log-question"></h3>
+                <p class="wrong-log-answer-label">Correct answer:</p>
+                <p class="wrong-log-answer" id="wrong-log-answer"></p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
+
