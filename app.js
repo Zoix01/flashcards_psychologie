@@ -44,10 +44,56 @@
   const wrongLogDetail = document.getElementById("wrong-log-detail");
   const wrongLogQuestion = document.getElementById("wrong-log-question");
   const wrongLogAnswer = document.getElementById("wrong-log-answer");
+  const wrongLogActions = document.getElementById("wrong-log-actions");
+
+  const statsByBookEl = document.getElementById("stats-by-book");
+  const statsByTopicEl = document.getElementById("stats-by-topic");
+  const statsBookSection = document.getElementById("stats-book-section");
+  const statsTopicSection = document.getElementById("stats-topic-section");
+  const statsEmptyEl = document.getElementById("stats-empty");
 
   // Helpers
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
+  }
+
+  function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  function parseOptionLabelAndText(opt) {
+    const m = String(opt).match(/^([A-Ea-e])[.:\s)]*\s*(.*)$/);
+    if (m) return { letter: m[1].toUpperCase(), text: m[2].trim() };
+    return null;
+  }
+
+  function rebuildOptionsWithShuffledTexts(options) {
+    const letters = ["A", "B", "C", "D", "E"];
+    const parsed = options.map((o) => parseOptionLabelAndText(o));
+    const allValid = parsed.every((p) => p != null);
+    if (!allValid || parsed.length === 0) return null;
+
+    const texts = parsed.map((p) => p.text);
+    shuffleArray(texts);
+
+    return texts.map((t, i) => `${letters[i]}. ${t}`);
+  }
+
+  function extractCorrectText(correctStr, options) {
+    const p = parseOptionLabelAndText(correctStr);
+    if (p) {
+      if (p.text) return p.text;
+      const optWithLetter = (options || []).find((o) => {
+        const q = parseOptionLabelAndText(o);
+        return q && q.letter === p.letter;
+      });
+      const q = optWithLetter ? parseOptionLabelAndText(optWithLetter) : null;
+      return q ? q.text : "";
+    }
+    return (correctStr || "").trim();
   }
 
   function loadCards() {
@@ -177,16 +223,20 @@
     });
   }
 
-  function pickWeightedRandomCard(candidates) {
-    if (!candidates.length) return null;
+  function pickWeightedRandomCard(candidates, excludeCard) {
+    let pool = candidates;
+    if (excludeCard && excludeCard.id != null) {
+      pool = candidates.filter((c) => c.id !== excludeCard.id);
+    }
+    if (!pool.length) return null;
     let totalWeight = 0;
-    for (const c of candidates) {
+    for (const c of pool) {
       const w = typeof c.weight === "number" ? c.weight : 1;
       totalWeight += clamp(w, 0.2, 5.0);
     }
-    if (totalWeight <= 0) return candidates[0];
+    if (totalWeight <= 0) return pool[0];
     let r = Math.random() * totalWeight;
-    for (const c of candidates) {
+    for (const c of pool) {
       const w = typeof c.weight === "number" ? c.weight : 1;
       const adjusted = clamp(w, 0.2, 5.0);
       if (r < adjusted) {
@@ -194,10 +244,10 @@
       }
       r -= adjusted;
     }
-    return candidates[candidates.length - 1];
+    return pool[pool.length - 1];
   }
 
-  function renderNextCard() {
+  function renderNextCard(excludeCard) {
     const filtered = getFilteredCards();
     if (!filtered.length) {
       currentCard = null;
@@ -211,7 +261,10 @@
       return;
     }
 
-    currentCard = pickWeightedRandomCard(filtered);
+    currentCard = pickWeightedRandomCard(filtered, excludeCard);
+    if (!currentCard) {
+      currentCard = pickWeightedRandomCard(filtered);
+    }
     hasAnsweredCurrent = false;
 
     noCardsMessage.classList.add("hidden");
@@ -244,7 +297,15 @@
   }
 
   function renderMultipleChoice(card) {
-    const options = Array.isArray(card.options) ? card.options : [];
+    const rawOptions = Array.isArray(card.options) ? [...card.options] : [];
+    const rebuilt = rebuildOptionsWithShuffledTexts(rawOptions);
+    const options = rebuilt || (() => { shuffleArray(rawOptions); return rawOptions; })();
+    const correctText = extractCorrectText(card.correct || "", rawOptions);
+    const correctDisplayOption = options.find((opt) => {
+      const p = parseOptionLabelAndText(opt);
+      return p && p.text === correctText;
+    }) || card.correct;
+
     options.forEach((opt) => {
       const btn = document.createElement("button");
       btn.type = "button";
@@ -255,16 +316,16 @@
         hasAnsweredCurrent = true;
 
         const isCorrect =
-          typeof card.correct === "string" &&
-          card.correct.trim() === opt.trim();
+          typeof correctDisplayOption === "string" &&
+          correctDisplayOption.trim() === opt.trim();
 
         const allOptionButtons =
           answerAreaEl.querySelectorAll(".option-btn");
         allOptionButtons.forEach((b) => {
           b.classList.add("disabled");
           if (
-            typeof card.correct === "string" &&
-            card.correct.trim() === b.textContent.trim()
+            typeof correctDisplayOption === "string" &&
+            correctDisplayOption.trim() === b.textContent.trim()
           ) {
             b.classList.add("correct");
           }
@@ -277,7 +338,7 @@
           feedbackEl.classList.add("correct");
         } else {
           btn.classList.add("wrong");
-          feedbackEl.textContent = `Wrong. Correct answer: ${card.correct}`;
+          feedbackEl.textContent = `Wrong. Correct answer: ${correctDisplayOption}`;
           feedbackEl.classList.remove("correct");
           feedbackEl.classList.add("wrong");
         }
@@ -397,7 +458,7 @@
     card.lastSeen = new Date().toISOString();
 
     saveCards();
-    renderNextCard();
+    renderNextCard(card);
   }
 
   function handleDiscardCurrentCard() {
@@ -459,6 +520,127 @@
       li.appendChild(btn);
       wrongLogList.appendChild(li);
     });
+
+    if (wrongLogActions) {
+      wrongLogActions.classList.toggle("hidden", wrongCards.length === 0);
+    }
+  }
+
+  function computeStatsByBook() {
+    const byBook = new Map();
+    for (const c of cards) {
+      const book = (c.book || "").trim() || "(No book)";
+      if (!byBook.has(book)) {
+        byBook.set(book, { correct: 0, wrong: 0 });
+      }
+      const t = byBook.get(book);
+      t.correct += c.timesCorrect || 0;
+      t.wrong += c.timesWrong || 0;
+    }
+    return Array.from(byBook.entries())
+      .map(([name, t]) => ({ name, ...t }))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  }
+
+  function computeStatsByTopic() {
+    const byTopic = new Map();
+    for (const c of cards) {
+      const topic = (c.topic || "").trim() || "(No topic)";
+      if (!byTopic.has(topic)) {
+        byTopic.set(topic, { correct: 0, wrong: 0 });
+      }
+      const t = byTopic.get(topic);
+      t.correct += c.timesCorrect || 0;
+      t.wrong += c.timesWrong || 0;
+    }
+    return Array.from(byTopic.entries())
+      .map(([name, t]) => ({ name, ...t }))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  }
+
+  function formatStatRow(name, correct, wrong) {
+    const total = correct + wrong;
+    if (total === 0) return null;
+    const pct = Math.round((correct / total) * 100);
+    return { name, correct, wrong, total, pct };
+  }
+
+  function refreshStatisticsView() {
+    const byBook = computeStatsByBook();
+    const byTopic = computeStatsByTopic();
+
+    const bookRows = byBook
+      .map((b) => formatStatRow(b.name, b.correct, b.wrong))
+      .filter(Boolean);
+    const topicRows = byTopic
+      .map((t) => formatStatRow(t.name, t.correct, t.wrong))
+      .filter(Boolean);
+
+    const hasAny = bookRows.length > 0 || topicRows.length > 0;
+
+    if (statsEmptyEl) {
+      statsEmptyEl.classList.toggle("hidden", hasAny);
+    }
+    if (statsBookSection) {
+      statsBookSection.classList.toggle("hidden", bookRows.length === 0);
+    }
+    if (statsByBookEl) {
+      statsByBookEl.innerHTML = "";
+      bookRows.forEach((r) => {
+        const div = document.createElement("div");
+        div.className = "stats-row";
+        div.innerHTML = `<span class="stats-label">${escapeHtml(r.name)}</span><span class="stats-pct">${r.pct}%</span><span class="stats-count">${r.correct} right / ${r.wrong} wrong</span>`;
+        statsByBookEl.appendChild(div);
+      });
+    }
+    if (statsTopicSection) {
+      statsTopicSection.classList.toggle("hidden", topicRows.length === 0);
+    }
+    if (statsByTopicEl) {
+      statsByTopicEl.innerHTML = "";
+      topicRows.forEach((r) => {
+        const div = document.createElement("div");
+        div.className = "stats-row";
+        div.innerHTML = `<span class="stats-label">${escapeHtml(r.name)}</span><span class="stats-pct">${r.pct}%</span><span class="stats-count">${r.correct} right / ${r.wrong} wrong</span>`;
+        statsByTopicEl.appendChild(div);
+      });
+    }
+  }
+
+  function escapeHtml(s) {
+    const div = document.createElement("div");
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  function resetAllStats() {
+    const confirmed = window.confirm(
+      "Reset all statistics (correct/wrong counts, weights, last seen)? This cannot be undone."
+    );
+    if (!confirmed) return;
+    cards.forEach((c) => {
+      c.timesCorrect = 0;
+      c.timesWrong = 0;
+      c.weight = 1.0;
+      c.lastSeen = null;
+    });
+    saveCards();
+    refreshStatisticsView();
+    refreshWrongLogView();
+    renderNextCard();
+  }
+
+  function clearWrongLog() {
+    const confirmed = window.confirm(
+      "Clear wrong answers log? This will set timesWrong to 0 for all cards."
+    );
+    if (!confirmed) return;
+    cards.forEach((c) => {
+      c.timesWrong = 0;
+    });
+    saveCards();
+    refreshStatisticsView();
+    refreshWrongLogView();
   }
 
   // Event wiring
@@ -473,6 +655,9 @@
       screens.forEach((s) => {
         if (s.id === targetId) {
           s.classList.add("active");
+          if (targetId === "statistics-section") {
+            refreshStatisticsView();
+          }
         } else {
           s.classList.remove("active");
         }
@@ -650,6 +835,20 @@
     handleDiscardCurrentCard();
   });
 
+  const resetStatsBtn = document.getElementById("reset-stats-btn");
+  const clearWrongLogBtn = document.getElementById("clear-wrong-log-btn");
+  const clearWrongLogBtnStats = document.getElementById("clear-wrong-log-btn-stats");
+
+  if (resetStatsBtn) {
+    resetStatsBtn.addEventListener("click", resetAllStats);
+  }
+  if (clearWrongLogBtn) {
+    clearWrongLogBtn.addEventListener("click", clearWrongLog);
+  }
+  if (clearWrongLogBtnStats) {
+    clearWrongLogBtnStats.addEventListener("click", clearWrongLog);
+  }
+
   function registerServiceWorker() {
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
@@ -667,6 +866,7 @@
   refreshBookControls();
   renderNextCard();
   refreshWrongLogView();
+  refreshStatisticsView();
   registerServiceWorker();
 })();
 

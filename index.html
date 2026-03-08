@@ -30,6 +30,13 @@
           >
             Study
           </button>
+          <button
+            class="tab-button"
+            data-target="statistics-section"
+            type="button"
+          >
+            Statistics
+          </button>
         </nav>
       </header>
 
@@ -220,11 +227,54 @@
                 You have no wrong answers yet.
               </div>
               <ul id="wrong-log-list" class="wrong-log-list"></ul>
+              <div id="wrong-log-actions" class="wrong-log-actions">
+                <button
+                  id="clear-wrong-log-btn"
+                  class="btn ghost danger"
+                  type="button"
+                >
+                  Clear wrong answers log
+                </button>
+              </div>
               <div id="wrong-log-detail" class="wrong-log-detail hidden">
                 <h3 class="wrong-log-question" id="wrong-log-question"></h3>
                 <p class="wrong-log-answer-label">Correct answer:</p>
                 <p class="wrong-log-answer" id="wrong-log-answer"></p>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Statistics screen -->
+        <section id="statistics-section" class="screen">
+          <div class="card">
+            <h2 class="card-title">Statistics</h2>
+
+            <div id="stats-book-section" class="stats-section">
+              <h3 class="stats-subtitle">By book</h3>
+              <div id="stats-by-book" class="stats-list"></div>
+            </div>
+
+            <div id="stats-topic-section" class="stats-section">
+              <h3 class="stats-subtitle">By topic</h3>
+              <div id="stats-by-topic" class="stats-list"></div>
+            </div>
+
+            <p id="stats-empty" class="message info">
+              No answer statistics yet. Study some cards to see stats.
+            </p>
+
+            <div class="stats-actions">
+              <button id="reset-stats-btn" class="btn ghost danger" type="button">
+                Reset all statistics
+              </button>
+              <button
+                id="clear-wrong-log-btn-stats"
+                class="btn ghost danger"
+                type="button"
+              >
+                Clear wrong answers log
+              </button>
             </div>
           </div>
         </section>

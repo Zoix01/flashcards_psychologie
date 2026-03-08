@@ -477,6 +477,72 @@ body {
   color: #a7f3d0;
 }
 
+.wrong-log-actions {
+  margin-top: 0.5rem;
+}
+
+/* Statistics */
+.stats-section {
+  margin-bottom: 0.5rem;
+}
+
+.stats-section.hidden {
+  display: none;
+}
+
+.stats-subtitle {
+  margin: 0.9rem 0 0.35rem;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.stats-subtitle:first-of-type {
+  margin-top: 0;
+}
+
+.stats-list {
+  margin-bottom: 0.5rem;
+}
+
+.stats-list.hidden {
+  display: none;
+}
+
+.stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.5rem;
+  background: rgba(15, 23, 42, 0.6);
+  margin-bottom: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.stats-label {
+  flex: 1;
+  min-width: 0;
+  color: #e5e7eb;
+}
+
+.stats-pct {
+  font-weight: 600;
+  color: #a7f3d0;
+}
+
+.stats-count {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.stats-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
 /* Media queries */
 @media (min-width: 640px) {
   .app {
