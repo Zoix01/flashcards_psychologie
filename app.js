@@ -15,6 +15,7 @@
   const bookNameInput = document.getElementById("book-name-input");
   const jsonInput = document.getElementById("json-input");
   const addCardsBtn = document.getElementById("add-cards-btn");
+  const exportCardsBtn = document.getElementById("export-cards-btn");
   const clearCardsBtn = document.getElementById("clear-cards-btn");
   const uploadMessage = document.getElementById("upload-message");
   const cardCountEl = document.getElementById("card-count");
@@ -786,6 +787,32 @@
       );
     }
   });
+
+  if (exportCardsBtn) {
+    exportCardsBtn.addEventListener("click", () => {
+      clearUploadMessage();
+      if (!cards.length) {
+        showUploadMessage("No cards to export.", "error");
+        return;
+      }
+      const json = JSON.stringify(cards, null, 2);
+      navigator.clipboard
+        .writeText(json)
+        .then(() => {
+          showUploadMessage(
+            `Copied ${cards.length} card(s) to clipboard. Paste in the JSON field on another device and click Add cards.`,
+            "success"
+          );
+        })
+        .catch(() => {
+          showUploadMessage(
+            "Could not copy to clipboard. Try selecting the JSON below and copy manually.",
+            "error"
+          );
+          jsonInput.value = json;
+        });
+    });
+  }
 
   clearCardsBtn.addEventListener("click", () => {
     const confirmed = window.confirm(
