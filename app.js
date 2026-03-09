@@ -5,6 +5,8 @@
   let cards = [];
   let currentCard = null;
   let hasAnsweredCurrent = false;
+  /** @type {boolean|null} true/false = actual correctness (MC, fill-in), null = use rating (open-ended) */
+  let lastAnswerActualCorrect = null;
 
   // DOM references
   const tabButtons = document.querySelectorAll(".tab-button");
@@ -344,6 +346,7 @@
           feedbackEl.classList.add("wrong");
         }
 
+        lastAnswerActualCorrect = isCorrect;
         showConfidenceButtons();
       });
       answerAreaEl.appendChild(btn);
@@ -370,11 +373,11 @@
       const userAnswer = (input.value || "").trim();
       const correctAnswer =
         typeof card.correct === "string" ? card.correct.trim() : "";
-      if (
+      const isCorrect =
         userAnswer &&
         correctAnswer &&
-        userAnswer.toLowerCase() === correctAnswer.toLowerCase()
-      ) {
+        userAnswer.toLowerCase() === correctAnswer.toLowerCase();
+      if (isCorrect) {
         feedbackEl.textContent = "Looks correct.";
         feedbackEl.classList.remove("wrong");
         feedbackEl.classList.add("correct");
@@ -383,6 +386,7 @@
         feedbackEl.classList.remove("correct");
         feedbackEl.classList.add("wrong");
       }
+      lastAnswerActualCorrect = isCorrect;
       input.disabled = true;
       btn.disabled = true;
       showConfidenceButtons();
@@ -413,6 +417,7 @@
       feedbackEl.textContent = `Answer: ${card.correct}`;
       feedbackEl.classList.remove("wrong");
       feedbackEl.classList.add("correct");
+      lastAnswerActualCorrect = null;
       showConfidenceButtons();
     });
 
@@ -425,24 +430,19 @@
 
   function applyConfidenceRating(card, rating) {
     let factor;
-    let isCorrect;
     switch (rating) {
       case "didnt_know":
         factor = 2.0;
-        isCorrect = false;
         break;
       case "shaky":
         factor = 1.5;
-        isCorrect = false;
         break;
       case "good":
         factor = 0.8;
-        isCorrect = true;
         break;
       case "nailed_it":
       default:
         factor = 0.5;
-        isCorrect = true;
         break;
     }
 
@@ -451,7 +451,11 @@
     const newWeight = clamp(currentWeight * factor, 0.2, 5.0);
     card.weight = newWeight;
 
-    if (isCorrect) {
+    const isCorrectForStats =
+      lastAnswerActualCorrect !== null
+        ? lastAnswerActualCorrect
+        : rating === "good" || rating === "nailed_it";
+    if (isCorrectForStats) {
       card.timesCorrect = (card.timesCorrect || 0) + 1;
     } else {
       card.timesWrong = (card.timesWrong || 0) + 1;
